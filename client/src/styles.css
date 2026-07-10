@@ -1,0 +1,156 @@
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #eef2f4;
+}
+
+.MuiDataGrid-row {
+  cursor: pointer;
+}
+
+.app-frame {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, #eef4f6 0, #f7f8f9 280px),
+    #f7f8f9;
+}
+
+.topbar {
+  min-height: 58px;
+  background: #134e5d;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.topbar-subtitle {
+  display: block;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1;
+}
+
+.workspace-panel {
+  padding: 20px;
+  border: 1px solid #dce3e6;
+  box-shadow: 0 8px 22px rgba(30, 43, 48, 0.07);
+}
+
+.patient-search-panel {
+  border-top: 4px solid #1d5f71;
+}
+
+.context-panel {
+  padding: 14px 18px;
+  border: 1px solid #cbd9de;
+  background: #f8fbfc;
+  box-shadow: 0 6px 16px rgba(30, 43, 48, 0.05);
+}
+
+.section-box {
+  border: 1px solid #d7dcdf;
+  border-radius: 6px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.resource-panel {
+  min-width: 0;
+}
+
+.patient-grid-shell,
+.data-grid-shell {
+  width: 100%;
+  border: 1px solid #dce3e6;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.patient-grid-shell {
+  height: 380px;
+}
+
+.data-grid-shell {
+  height: 320px;
+}
+
+.MuiDataGrid-root {
+  border: 0 !important;
+}
+
+.MuiDataGrid-columnHeaders {
+  background: #f2f6f7;
+  color: #26393f;
+  font-weight: 700;
+}
+
+.MuiDataGrid-row.Mui-selected,
+.MuiDataGrid-row.Mui-selected:hover {
+  background: #e5f1f4 !important;
+}
+
+.workflow-tabs {
+  min-height: 42px;
+  border-bottom: 1px solid #dce3e6;
+}
+
+.workflow-tabs .MuiTab-root {
+  min-height: 42px;
+  text-transform: none;
+  font-weight: 650;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.split-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.inline-editor {
+  border: 1px solid #d7dcdf;
+  border-left: 4px solid #1d5f71;
+  border-radius: 6px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.editor-kicker {
+  margin-bottom: 12px;
+  color: #49646d;
+}
+
+.empty-state {
+  border: 1px dashed #bdcbd0;
+  border-radius: 6px;
+  padding: 16px;
+  color: #60747b;
+  background: #fbfcfc;
+}
+
+@media (max-width: 1200px) {
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .form-grid,
+  .split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-panel,
+  .context-panel {
+    padding: 14px;
+  }
+}
