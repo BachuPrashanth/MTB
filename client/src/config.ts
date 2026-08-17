@@ -1,5 +1,6 @@
 import type { ResourceConfig } from './types';
 
+
 export const yesNo = ['Yes', 'No'];
 export const gender = ['Male', 'Female', 'Transgendered female to male', 'Transgendered male to female'];
 export const race = ['White', 'Black or African American', 'American Indian or Alaska Native', 'Asian', 'Native Hawaiian or Other Pacific Islander', 'Spanish American', 'Middle Eastern', 'Biracial', 'Unknown', 'NA', 'Refuse'];

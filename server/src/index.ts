@@ -417,6 +417,20 @@ app.use((error: Error, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ message: error.message || 'Unexpected server error.' });
 });
 
-app.listen(port, () => {
+// app.listen(port, () => {
+//   console.log(`MTB API listening on http://localhost:${port}`);
+// });
+
+
+//added "0.0.0.0",
+app.listen(port,'0.0.0.0', () => {
   console.log(`MTB API listening on http://localhost:${port}`);
+});
+
+//added below block
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    application: "MTB API"
+  });
 });

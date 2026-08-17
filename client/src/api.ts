@@ -1,11 +1,23 @@
 import type { RecordData } from './types';
 
+// Vite reads this value from vite.config.ts.
+//
+// Local development:
+// BASE_URL = /
+// API_BASE_URL = /api
+//
+// Production build:
+// BASE_URL = /mtb/
+// API_BASE_URL = /mtb/api
+
+const API_BASE_URL = `${import.meta.env.BASE_URL}api`;
+
 function urlFor(endpoint: string, parentId?: number, search?: string) {
   const params = new URLSearchParams();
   if (parentId) params.set('parentId', String(parentId));
   if (search) params.set('search', search);
   const query = params.toString();
-  return `/api/${endpoint}${query ? `?${query}` : ''}`;
+  return `${API_BASE_URL}/${endpoint}${query ? `?${query}` : ''}`;
 }
 
 async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
@@ -34,12 +46,12 @@ export const api = {
     });
   },
   update(endpoint: string, id: number, data: RecordData) {
-    return request<RecordData>(`/api/${endpoint}/${id}`, {
+    return request<RecordData>(`${API_BASE_URL}/${endpoint}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data)
     });
   },
   remove(endpoint: string, id: number) {
-    return request<void>(`/api/${endpoint}/${id}`, { method: 'DELETE' });
+    return request<void>(`${API_BASE_URL}/${endpoint}/${id}`, { method: 'DELETE' });
   }
 };

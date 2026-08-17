@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Stack, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
@@ -25,8 +25,6 @@ function singularTitle(title: string) {
 export default function ResourcePanel({ config, parentId, selected, onSelect, onSaved, showInlineEditor = true }: Props) {
   const [rows, setRows] = useState<RecordData[]>([]);
   const [editing, setEditing] = useState<RecordData | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState<RecordData>({});
   const [error, setError] = useState<string | null>(null);
 
   const columns = useMemo<GridColDef[]>(
@@ -58,8 +56,6 @@ export default function ResourcePanel({ config, parentId, selected, onSelect, on
   useEffect(() => {
     setRows([]);
     setEditing(null);
-    setDraft({});
-    setCreating(false);
     void load();
   }, [config.endpoint, parentId]);
 
@@ -72,8 +68,6 @@ export default function ResourcePanel({ config, parentId, selected, onSelect, on
     try {
       const saved = record.id ? await api.update(config.endpoint, Number(record.id), record) : await api.create(config.endpoint, record, parentId);
       await load();
-      setCreating(false);
-      setDraft({});
       setEditing(saved);
       onSaved?.(saved);
       onSelect?.(saved);
@@ -97,6 +91,7 @@ export default function ResourcePanel({ config, parentId, selected, onSelect, on
 
   const selectionModel: GridRowSelectionModel = editing?.id ? { type: 'include', ids: new Set([editing.id]) } : { type: 'include', ids: new Set() };
   const singleTitle = singularTitle(config.title);
+  const gridHeight = Math.min(300, Math.max(124, 56 + rows.length * 38));
 
   return (
     <Stack spacing={1.5} className="resource-panel">
@@ -107,7 +102,7 @@ export default function ResourcePanel({ config, parentId, selected, onSelect, on
           {editing?.id && <Chip color="primary" size="small" label={`Selected #${editing.id}`} />}
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button startIcon={<AddIcon />} onClick={() => { setDraft({}); setCreating(true); }}>
+          <Button startIcon={<AddIcon />} onClick={() => { setEditing({}); onSelect?.(null); }}>
             New {singleTitle}
           </Button>
           <Button color="error" variant="outlined" startIcon={<DeleteIcon />} disabled={!editing?.id} onClick={remove}>
@@ -116,7 +111,7 @@ export default function ResourcePanel({ config, parentId, selected, onSelect, on
         </Stack>
       </Stack>
       {error && <Alert severity="error">{error}</Alert>}
-      <Box className="data-grid-shell">
+      <Box className="data-grid-shell" sx={{ height: gridHeight }}>
         <DataGrid
           rows={rows}
           columns={columns}
@@ -135,22 +130,11 @@ export default function ResourcePanel({ config, parentId, selected, onSelect, on
       {showInlineEditor && editing && (
         <Box className="inline-editor">
           <Typography variant="subtitle2" className="editor-kicker">
-            Edit {singleTitle}
+            {editing.id ? `Edit ${singleTitle}` : `New ${singleTitle}`}
           </Typography>
-          <RecordForm fields={config.fields} value={editing} onChange={setEditing} onSave={() => save(editing)} />
+          <RecordForm fields={config.fields} value={editing} onChange={setEditing} onSave={() => save(editing)} saveLabel={editing.id ? 'Save' : 'Create'} />
         </Box>
       )}
-      <Dialog open={creating} onClose={() => setCreating(false)} fullWidth maxWidth="md">
-        <DialogTitle>New {config.title}</DialogTitle>
-        <DialogContent dividers>
-          <RecordForm fields={config.fields} value={draft} onChange={setDraft} onSave={() => save(draft)} saveLabel="Create" />
-        </DialogContent>
-        <DialogActions>
-          <Button variant="outlined" onClick={() => setCreating(false)}>
-            Cancel
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Stack>
   );
 }

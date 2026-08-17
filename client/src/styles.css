@@ -74,7 +74,7 @@ body {
 }
 
 .data-grid-shell {
-  height: 320px;
+  min-height: 124px;
 }
 
 .MuiDataGrid-root {
