@@ -1,0 +1,32 @@
+FROM node:24-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY client/package.json ./client/package.json
+COPY server/package.json ./server/package.json
+
+RUN npm ci
+
+COPY server ./server
+COPY script.sql ./script.sql
+
+RUN npm run build --workspace server
+
+
+FROM node:24-alpine AS runtime
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/server/dist ./server/dist
+COPY --from=build /app/server/package.json ./server/package.json
+COPY --from=build /app/script.sql ./script.sql
+
+WORKDIR /app/server
+
+EXPOSE 3001
+
+CMD ["node", "dist/index.js"]

@@ -1,0 +1,79 @@
+services:
+
+  mtb_phase1_db:
+    container_name: mtb_phase1_db
+    image: postgres:16-alpine
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: mtb
+      POSTGRES_USER: mtb_app
+      POSTGRES_PASSWORD: ${MTB_DB_PASSWORD}
+
+    volumes:
+      - mtb_phase1_pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mtb_app -d mtb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+    networks:
+      - mtb_internal
+
+
+  mtb_api:
+    container_name: mtb_api
+
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.api
+
+    image: mtb_api:phase1
+
+    restart: unless-stopped
+
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://mtb_app:${MTB_DB_PASSWORD}@mtb_phase1_db:5432/mtb
+
+    depends_on:
+      mtb_phase1_db:
+        condition: service_healthy
+
+    expose:
+      - "3001"
+
+    networks:
+      - mtb_internal
+
+
+  mtb_frontend:
+    container_name: mtb_frontend
+
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.frontend
+
+    image: mtb_frontend:phase1
+
+    restart: unless-stopped
+
+    depends_on:
+      - mtb_api
+
+    ports:
+      - "127.0.0.1:8088:80"
+
+    networks:
+      - mtb_internal
+
+
+volumes:
+  mtb_phase1_pgdata:
+
+
+networks:
+  mtb_internal:
+    driver: bridge
