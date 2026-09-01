@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, AppBar, Box, Button, Chip, Container, Divider, Paper, Stack, Tab, Tabs, TextField, Toolbar, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import LogoutIcon from '@mui/icons-material/Logout';
 import SearchIcon from '@mui/icons-material/Search';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { api } from './api';
@@ -113,6 +114,22 @@ export default function App() {
     setMtbTab(0);
   }
 
+  const handleLogout = () => {
+  const keycloakLogoutUrl =
+    'https://cras-dev.kcr.uky.edu:444/auth/realms/mtb/protocol/openid-connect/logout';
+
+  const returnUrl =
+    'https://crdc.kcr.uky.edu/mtb/';
+
+  const providerLogoutUrl =
+    `${keycloakLogoutUrl}` +
+    `?id_token_hint={id_token}` +
+    `&post_logout_redirect_uri=${encodeURIComponent(returnUrl)}`;
+
+  window.location.href =
+    `/mtb/oauth2/sign_out?rd=${encodeURIComponent(providerLogoutUrl)}`;
+};
+
   return (
     <Box className="app-frame">
       <AppBar position="sticky" elevation={0}>
@@ -123,6 +140,9 @@ export default function App() {
               Molecular Tumor Board Tracking
             </Typography> */}
           </Box>
+          <Button className="logout-button" startIcon={<LogoutIcon />} onClick={handleLogout}>
+            Log out
+          </Button>
         </Toolbar>
       </AppBar>
       <Container maxWidth="xl" sx={{ py: 3 }}>
