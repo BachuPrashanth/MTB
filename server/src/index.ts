@@ -14,6 +14,171 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+const lookupSchema = 'mtbtracking';
+
+function quoteIdent(name: string) {
+  return `"${name.replace(/"/g, '""')}"`;
+}
+
+function qualifiedTable(table: string) {
+  return `${quoteIdent(lookupSchema)}.${quoteIdent(table)}`;
+}
+
+function isPgError(error: unknown, code: string) {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
+}
+
+function findColumn(columns: string[], candidates: string[]) {
+  const lower = new Map(columns.map((column) => [column.toLowerCase(), column]));
+  return candidates.map((candidate) => lower.get(candidate.toLowerCase())).find(Boolean);
+}
+
+async function lookupColumns(table: string) {
+  const result = await query<{ column_name: string }>(
+    `select column_name
+     from information_schema.columns
+     where table_schema = $1 and table_name = $2`,
+    [lookupSchema, table]
+  );
+  return result.rows.map((row) => row.column_name);
+}
+
+app.get('/api/lookups/genes', async (req, res, next) => {
+  try {
+    const columns = await lookupColumns('lugene');
+    if (!columns.length) {
+      res.json([]);
+      return;
+    }
+
+    const idColumn = findColumn(columns, ['geneid', 'gene_id', 'id']);
+    const geneColumn = findColumn(columns, ['genename', 'gene_name', 'gene']);
+    const biomarkerColumn = findColumn(columns, ['biomarker', 'isbiomarker', 'biomarkerflag']);
+
+    if (!geneColumn) {
+      res.status(500).json({ message: 'lugene table does not include a gene name column.' });
+      return;
+    }
+
+    const params: unknown[] = [];
+    const where: string[] = [];
+    if (req.query.search) {
+      params.push(`%${String(req.query.search).toLowerCase()}%`);
+      where.push(`lower(coalesce(${quoteIdent(geneColumn)}::text, '')) like $${params.length}`);
+    }
+
+    const result = await query<Record<string, unknown>>(
+      `select ${idColumn ? quoteIdent(idColumn) : quoteIdent(geneColumn)} as id,
+              ${quoteIdent(geneColumn)} as gene,
+              ${biomarkerColumn ? `${quoteIdent(biomarkerColumn)}::text` : `''`} as biomarker
+       from ${qualifiedTable('lugene')}
+       ${where.length ? `where ${where.join(' and ')}` : ''}
+       order by ${quoteIdent(geneColumn)}
+       limit 500`,
+      params
+    );
+    res.json(result.rows);
+  } catch (error) {
+    if (isPgError(error, '42P01')) {
+      res.json([]);
+      return;
+    }
+    next(error);
+  }
+});
+
+app.get('/api/lookups/gene-mutations', async (req, res, next) => {
+  try {
+    const columns = await lookupColumns('lugenemutation');
+    if (!columns.length) {
+      res.json([]);
+      return;
+    }
+
+    const idColumn = findColumn(columns, ['genemutid', 'genemutationid', 'mutationid', 'id']);
+    const geneIdColumn = findColumn(columns, ['geneid', 'gene_id']);
+    const geneNameColumn = findColumn(columns, ['genename', 'gene_name', 'gene']);
+    const mutationColumn = findColumn(columns, ['genemutation', 'mutation', 'mutationname', 'mutation_name']);
+
+    if (!mutationColumn) {
+      res.status(500).json({ message: 'lugenemutation table does not include a mutation column.' });
+      return;
+    }
+
+    const params: unknown[] = [];
+    const where: string[] = [];
+    const geneId = Number(req.query.geneId);
+    const gene = String(req.query.gene ?? '');
+
+    if (geneIdColumn && Number.isFinite(geneId)) {
+      params.push(geneId);
+      where.push(`${quoteIdent(geneIdColumn)} = $${params.length}`);
+    } else if (geneNameColumn && gene) {
+      params.push(gene);
+      where.push(`${quoteIdent(geneNameColumn)} = $${params.length}`);
+    }
+
+    const result = await query<Record<string, unknown>>(
+      `select ${idColumn ? quoteIdent(idColumn) : quoteIdent(mutationColumn)} as id,
+              ${quoteIdent(mutationColumn)} as mutation
+       from ${qualifiedTable('lugenemutation')}
+       ${where.length ? `where ${where.join(' and ')}` : ''}
+       order by ${quoteIdent(mutationColumn)}
+       limit 500`,
+      params
+    );
+    res.json(result.rows);
+  } catch (error) {
+    if (isPgError(error, '42P01')) {
+      res.json([]);
+      return;
+    }
+    next(error);
+  }
+});
+
+app.post('/api/lookups/gene-mutations', async (req, res, next) => {
+  try {
+    const columns = await lookupColumns('lugenemutation');
+    if (!columns.length) {
+      res.status(501).json({ message: 'lugenemutation lookup table is not available in this database.' });
+      return;
+    }
+
+    const idColumn = findColumn(columns, ['genemutid', 'genemutationid', 'mutationid', 'id']);
+    const geneIdColumn = findColumn(columns, ['geneid', 'gene_id']);
+    const geneNameColumn = findColumn(columns, ['genename', 'gene_name', 'gene']);
+    const mutationColumn = findColumn(columns, ['genemutation', 'mutation', 'mutationname', 'mutation_name']);
+
+    if (!mutationColumn) {
+      res.status(500).json({ message: 'lugenemutation table does not include a mutation column.' });
+      return;
+    }
+
+    const data: Record<string, unknown> = { [mutationColumn]: req.body.mutation ?? null };
+    if (geneIdColumn && req.body.geneId) data[geneIdColumn] = Number(req.body.geneId);
+    if (geneNameColumn && req.body.gene) data[geneNameColumn] = req.body.gene;
+
+    const dataColumns = Object.keys(data).filter((column) => data[column] !== null);
+    const values = dataColumns.map((column) => data[column]);
+    const placeholders = values.map((_, index) => `$${index + 1}`);
+    const result = await query<Record<string, unknown>>(
+      `insert into ${qualifiedTable('lugenemutation')} (${dataColumns.map(quoteIdent).join(', ')})
+       values (${placeholders.join(', ')})
+       returning ${idColumn ? quoteIdent(idColumn) : quoteIdent(mutationColumn)} as id,
+                 ${quoteIdent(mutationColumn)} as mutation`,
+      values
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    if (isPgError(error, '42P01')) {
+      res.status(501).json({ message: 'lugenemutation lookup table is not available in this database.' });
+      return;
+    }
+    next(error);
+  }
+});
+
 app.use(
   '/api/patients',
   crudRouter({

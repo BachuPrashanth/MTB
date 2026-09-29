@@ -52,7 +52,6 @@ export default function App() {
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<RecordData | null>(null);
   const [selectedMtbReview, setSelectedMtbReview] = useState<RecordData | null>(null);
   const [selectedRecommendation, setSelectedRecommendation] = useState<RecordData | null>(null);
-  const [mtbTab, setMtbTab] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   async function loadPatients(query = search) {
@@ -98,7 +97,6 @@ export default function App() {
       setSelectedDiagnosis(null);
       setSelectedMtbReview(null);
       setSelectedRecommendation(null);
-      setMtbTab(0);
     }
   }
 
@@ -111,7 +109,6 @@ export default function App() {
     setSelectedRecommendation(null);
     setPatientDraft({});
     setPatientTab(0);
-    setMtbTab(0);
   }
 
 
@@ -287,7 +284,6 @@ export default function App() {
                   onSelect={(record) => {
                     setSelectedMtbReview(record);
                     setSelectedRecommendation(null);
-                    setMtbTab(0);
                   }}
                 />
               </Stack>
@@ -303,26 +299,18 @@ export default function App() {
                     {fieldLabel(selectedMtbReview, ['batch', 'caseNumber', 'reviewType'], 'Selected MTB review')}
                   </Typography>
                 </Box>
-                <Tabs value={mtbTab} onChange={(_event, value) => setMtbTab(value)} className="workflow-tabs">
-                  <Tab label="Review Details" />
-                  <Tab label="Test Types" />
-                  <Tab label="Recommendations" />
-                </Tabs>
-                {mtbTab === 0 && <RecordForm fields={mtbReviewConfig.fields} value={selectedMtbReview} onChange={setSelectedMtbReview} onSave={() => api.update('mtb-reviews', Number(selectedMtbReview.id), selectedMtbReview)} />}
-                {mtbTab === 1 && <ResourcePanel config={testTypeConfig} parentId={Number(selectedMtbReview.id)} />}
-                {mtbTab === 2 && (
-                  <ResourcePanel
-                    config={recommendationConfig}
-                    parentId={Number(selectedMtbReview.id)}
-                    selected={selectedRecommendation}
-                    onSelect={setSelectedRecommendation}
-                  />
-                )}
+                <ResourcePanel config={testTypeConfig} parentId={Number(selectedMtbReview.id)} />
+                <ResourcePanel
+                  config={recommendationConfig}
+                  parentId={Number(selectedMtbReview.id)}
+                  selected={selectedRecommendation}
+                  onSelect={setSelectedRecommendation}
+                />
               </Stack>
             </Paper>
           )}
 
-          {selectedPatient && patientTab === 3 && selectedDiagnosis && selectedMtbReview && mtbTab === 2 && selectedRecommendation && (
+          {selectedPatient && patientTab === 3 && selectedDiagnosis && selectedMtbReview && selectedRecommendation && (
             <Paper className="workspace-panel">
               <Stack spacing={2}>
                 <Box>

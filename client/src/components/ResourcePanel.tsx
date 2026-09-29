@@ -5,6 +5,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
 import { api } from '../api';
 import type { RecordData, ResourceConfig } from '../types';
+import GeneLookupDialog from './GeneLookupDialog';
 import RecordForm from './RecordForm';
 
 type Props = {
@@ -25,6 +26,7 @@ function singularTitle(title: string) {
 export default function ResourcePanel({ config, parentId, selected, onSelect, onSaved, showInlineEditor = true }: Props) {
   const [rows, setRows] = useState<RecordData[]>([]);
   const [editing, setEditing] = useState<RecordData | null>(null);
+  const [lookupOpen, setLookupOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const columns = useMemo<GridColDef[]>(
@@ -89,9 +91,36 @@ export default function ResourcePanel({ config, parentId, selected, onSelect, on
     }
   }
 
+  async function createFromGeneLookup(selection: { gene: string; mutation: string }) {
+    setError(null);
+    try {
+      const data =
+        config.key === 'recommendationGenes'
+          ? { gene: selection.gene, mutationName: selection.mutation }
+          : { gene: selection.gene, mutation: selection.mutation };
+      const saved = await api.create(config.endpoint, data, parentId);
+      await load();
+      setEditing(saved);
+      onSaved?.(saved);
+      onSelect?.(saved);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Save failed.');
+    }
+  }
+
+  function startNewRecord() {
+    if (config.key === 'geneticCounselingGenes' || config.key === 'recommendationGenes') {
+      setLookupOpen(true);
+      return;
+    }
+    setEditing({});
+    onSelect?.(null);
+  }
+
   const selectionModel: GridRowSelectionModel = editing?.id ? { type: 'include', ids: new Set([editing.id]) } : { type: 'include', ids: new Set() };
   const singleTitle = singularTitle(config.title);
-  const gridHeight = Math.min(300, Math.max(124, 56 + rows.length * 38));
+  const visibleRowCount = Math.min(Math.max(rows.length, 1), 5);
+  const gridHeight = 125 + visibleRowCount * 37;
 
   return (
     <Stack spacing={1.5} className="resource-panel">
@@ -102,7 +131,7 @@ export default function ResourcePanel({ config, parentId, selected, onSelect, on
           {editing?.id && <Chip color="primary" size="small" label={`Selected #${editing.id}`} />}
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button startIcon={<AddIcon />} onClick={() => { setEditing({}); onSelect?.(null); }}>
+          <Button startIcon={<AddIcon />} onClick={startNewRecord}>
             New {singleTitle}
           </Button>
           <Button color="error" variant="outlined" startIcon={<DeleteIcon />} disabled={!editing?.id} onClick={remove}>
@@ -135,6 +164,7 @@ export default function ResourcePanel({ config, parentId, selected, onSelect, on
           <RecordForm fields={config.fields} value={editing} onChange={setEditing} onSave={() => save(editing)} saveLabel={editing.id ? 'Save' : 'Create'} />
         </Box>
       )}
+      <GeneLookupDialog open={lookupOpen} onClose={() => setLookupOpen(false)} onUseSelected={createFromGeneLookup} />
     </Stack>
   );
 }
