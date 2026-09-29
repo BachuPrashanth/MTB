@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, AppBar, Box, Button, Chip, Container, Divider, Paper, Stack, Tab, Tabs, TextField, Toolbar, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import LogoutIcon from '@mui/icons-material/Logout';
 import SearchIcon from '@mui/icons-material/Search';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { api } from './api';
@@ -44,11 +45,11 @@ export default function App() {
   const [patients, setPatients] = useState<RecordData[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<RecordData | null>(null);
   const [patientDraft, setPatientDraft] = useState<RecordData>({});
+  const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [search, setSearch] = useState('');
   const [patientTab, setPatientTab] = useState(0);
   const [selectedGeneticCounseling, setSelectedGeneticCounseling] = useState<RecordData | null>(null);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<RecordData | null>(null);
-  const [diagnosisTab, setDiagnosisTab] = useState(0);
   const [selectedMtbReview, setSelectedMtbReview] = useState<RecordData | null>(null);
   const [selectedRecommendation, setSelectedRecommendation] = useState<RecordData | null>(null);
   const [mtbTab, setMtbTab] = useState(0);
@@ -74,6 +75,7 @@ export default function App() {
       await loadPatients();
       setSelectedPatient(saved);
       setPatientDraft({});
+      setShowNewPatientForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Patient save failed.');
     }
@@ -81,11 +83,11 @@ export default function App() {
 
   function resetNestedForPatient(patient: RecordData) {
     setSelectedPatient(patient);
+    setShowNewPatientForm(false);
     setSelectedGeneticCounseling(null);
     setSelectedDiagnosis(null);
     setSelectedMtbReview(null);
     setSelectedRecommendation(null);
-    setDiagnosisTab(0);
     setPatientTab(0);
   }
 
@@ -96,33 +98,52 @@ export default function App() {
       setSelectedDiagnosis(null);
       setSelectedMtbReview(null);
       setSelectedRecommendation(null);
-      setDiagnosisTab(0);
       setMtbTab(0);
     }
   }
 
   function startNewPatient() {
     setSelectedPatient(null);
+    setShowNewPatientForm(true);
     setSelectedGeneticCounseling(null);
     setSelectedDiagnosis(null);
     setSelectedMtbReview(null);
     setSelectedRecommendation(null);
     setPatientDraft({});
     setPatientTab(0);
-    setDiagnosisTab(0);
     setMtbTab(0);
   }
+
+
+  const handleLogout = () => {
+  const keycloakLogoutUrl =
+    'https://cras-dev.kcr.uky.edu:444/auth/realms/mtb/protocol/openid-connect/logout';
+
+  const returnUrl =
+    'https://crdc.kcr.uky.edu/mtb/';
+
+  const providerLogoutUrl =
+    `${keycloakLogoutUrl}` +
+    `?id_token_hint={id_token}` +
+    `&post_logout_redirect_uri=${encodeURIComponent(returnUrl)}`;
+
+  window.location.href =
+    `/mtb/oauth2/sign_out?rd=${encodeURIComponent(providerLogoutUrl)}`;
+};
 
   return (
     <Box className="app-frame">
       <AppBar position="sticky" elevation={0}>
         <Toolbar className="topbar">
           <Box>
-            <Typography variant="h6">MTB Review</Typography>
-            <Typography variant="caption" className="topbar-subtitle">
+            <Typography variant="h6">Molecular Tumor Board</Typography>
+            {/* <Typography variant="caption" className="topbar-subtitle">
               Molecular Tumor Board Tracking
-            </Typography>
+            </Typography> */}
           </Box>
+          <Button className="logout-button" startIcon={<LogoutIcon />} onClick={handleLogout}>
+            Log out
+          </Button>
         </Toolbar>
       </AppBar>
       <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -132,7 +153,7 @@ export default function App() {
             <Stack spacing={2}>
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }}>
                 <Box>
-                  <Typography variant="h5">Patient Search</Typography>
+                  <Typography variant="h5">Patient List</Typography>
                   <Typography color="text.secondary" variant="body2">
                     {patients.length} patient{patients.length === 1 ? '' : 's'} loaded
                   </Typography>
@@ -162,7 +183,7 @@ export default function App() {
                   getRowId={(row) => row.id}
                   rowSelectionModel={selectedPatient?.id ? { type: 'include', ids: new Set([selectedPatient.id]) } : { type: 'include', ids: new Set() }}
                   onRowClick={(params) => resetNestedForPatient(params.row)}
-                  pageSizeOptions={[5, 10, 25]}
+                  pageSizeOptions={[5, 10, 25, 100]}
                   initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
                   density="compact"
                 />
@@ -188,7 +209,7 @@ export default function App() {
             </Paper>
           )}
 
-          {!selectedPatient && (
+          {showNewPatientForm && !selectedPatient && (
             <Paper className="workspace-panel">
               <Stack spacing={2}>
                 <Box>
@@ -243,7 +264,6 @@ export default function App() {
                       setSelectedDiagnosis(record);
                       setSelectedMtbReview(null);
                       setSelectedRecommendation(null);
-                      setDiagnosisTab(0);
                     }}
                   />
                 )}
@@ -255,40 +275,26 @@ export default function App() {
             <Paper className="workspace-panel">
               <Stack spacing={2}>
                 <Box>
-                  <Typography variant="h5">Diagnosis Details Dashboard</Typography>
+                  <Typography variant="h5">MTB Reviews</Typography>
                   <Typography color="text.secondary" variant="body2">
                     {fieldLabel(selectedDiagnosis, ['site', 'histology', 'stage'], 'Selected diagnosis')}
                   </Typography>
                 </Box>
-                <Tabs value={diagnosisTab} onChange={(_event, value) => setDiagnosisTab(value)} className="workflow-tabs">
-                  <Tab label="Diagnosis Details" />
-                  <Tab label="MTB Reviews" />
-                </Tabs>
-                {diagnosisTab === 0 && (
-                  <RecordForm
-                    fields={diagnosisConfig.fields}
-                    value={selectedDiagnosis}
-                    onChange={setSelectedDiagnosis}
-                    onSave={() => api.update('diagnoses', Number(selectedDiagnosis.id), selectedDiagnosis)}
-                  />
-                )}
-                {diagnosisTab === 1 && (
-                  <ResourcePanel
-                    config={mtbReviewConfig}
-                    parentId={Number(selectedDiagnosis.id)}
-                    selected={selectedMtbReview}
-                    onSelect={(record) => {
-                      setSelectedMtbReview(record);
-                      setSelectedRecommendation(null);
-                      setMtbTab(0);
-                    }}
-                  />
-                )}
+                <ResourcePanel
+                  config={mtbReviewConfig}
+                  parentId={Number(selectedDiagnosis.id)}
+                  selected={selectedMtbReview}
+                  onSelect={(record) => {
+                    setSelectedMtbReview(record);
+                    setSelectedRecommendation(null);
+                    setMtbTab(0);
+                  }}
+                />
               </Stack>
             </Paper>
           )}
 
-          {selectedPatient && patientTab === 3 && selectedDiagnosis && diagnosisTab === 1 && selectedMtbReview && (
+          {selectedPatient && patientTab === 3 && selectedDiagnosis && selectedMtbReview && (
             <Paper className="workspace-panel">
               <Stack spacing={2}>
                 <Box>
@@ -320,27 +326,12 @@ export default function App() {
             <Paper className="workspace-panel">
               <Stack spacing={2}>
                 <Box>
-                  <Typography variant="h5">Recommendation Dashboard</Typography>
+                  <Typography variant="h5">Recommendation Genes</Typography>
                   <Typography color="text.secondary" variant="body2">
                     {fieldLabel(selectedRecommendation, ['recommendationType', 'recommendation'], 'Selected recommendation')}
                   </Typography>
                 </Box>
-                <div className="split-grid">
-                  <Box className="inline-editor">
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                      Recommendation Form
-                    </Typography>
-                    <RecordForm
-                      fields={recommendationConfig.fields}
-                      value={selectedRecommendation}
-                      onChange={setSelectedRecommendation}
-                      onSave={() => api.update('recommendations', Number(selectedRecommendation.id), selectedRecommendation)}
-                    />
-                  </Box>
-                  <Box>
-                    <ResourcePanel config={recommendationGeneConfig} parentId={Number(selectedRecommendation.id)} />
-                  </Box>
-                </div>
+                <ResourcePanel config={recommendationGeneConfig} parentId={Number(selectedRecommendation.id)} />
               </Stack>
             </Paper>
           )}

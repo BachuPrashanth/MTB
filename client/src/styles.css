@@ -24,12 +24,28 @@ body {
   min-height: 58px;
   background: #134e5d;
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  justify-content: space-between;
 }
 
 .topbar-subtitle {
   display: block;
   color: rgba(255, 255, 255, 0.78);
   line-height: 1;
+}
+
+.logout-button {
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.48) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+  font-weight: 650 !important;
+}
+
+.logout-button:hover {
+  border-color: rgba(255, 255, 255, 0.72) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: none !important;
 }
 
 .workspace-panel {
@@ -74,7 +90,7 @@ body {
 }
 
 .data-grid-shell {
-  height: 320px;
+  min-height: 124px;
 }
 
 .MuiDataGrid-root {
